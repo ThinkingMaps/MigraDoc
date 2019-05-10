@@ -78,6 +78,11 @@ namespace MigraDoc.DocumentObjectModel
                 formattedText._elements = formattedText._elements.Clone();
                 formattedText._elements._parent = formattedText;
             }
+            if (formattedText._shading != null)
+            {
+                formattedText._shading = formattedText._shading.Clone();
+                formattedText._shading._parent = formattedText;
+            }
             return formattedText;
         }
 
@@ -621,6 +626,21 @@ namespace MigraDoc.DocumentObjectModel
         }
         [DV(ItemType = typeof(DocumentObject))]
         internal ParagraphElements _elements;
+
+        /// <summary>
+        /// Gets the shading object.
+        /// </summary>
+        public Shading Shading
+        {
+            get { return _shading ?? (_shading = new Shading(this)); }
+            set
+            {
+                SetParent(value);
+                _shading = value;
+            }
+        }
+        [DV]
+        internal Shading _shading;
         #endregion
 
         #region Internal
@@ -643,6 +663,9 @@ namespace MigraDoc.DocumentObjectModel
                     isFormatted = true;
                 }
             }
+
+            if (!IsNull("Shading"))
+                Shading.Serialize(serializer);
 
             if (isFormatted)
                 serializer.Write("{");
