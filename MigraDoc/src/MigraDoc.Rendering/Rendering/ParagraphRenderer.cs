@@ -458,6 +458,32 @@ namespace MigraDoc.Rendering
             return null;
         }
 
+        Shading GetFormattedTextShading()
+        {
+            DocumentObject elements = DocumentRelations.GetParent(_currentLeaf.Current);
+            DocumentObject parent = DocumentRelations.GetParent(elements);
+            while (!(parent is Paragraph))
+            {
+                FormattedText formattedText = parent as FormattedText;
+                if (formattedText != null)
+                    return formattedText.Shading;
+                elements = DocumentRelations.GetParent(parent);
+                parent = DocumentRelations.GetParent(elements);
+            }
+            return null;
+        }
+
+        void RenderFormattedTextShading(XUnit width)
+        {
+            Shading shading = GetFormattedTextShading();
+
+            if (shading == null || shading.IsNull())
+                return;
+
+            ShadingRenderer shadingRenderer = new ShadingRenderer(_gfx, shading);
+            shadingRenderer.Render(_currentXPosition, _currentYPosition, width, _currentVerticalInfo.Height);
+        }
+
         /// <summary>
         /// Probes the paragraph elements after a right aligned tab stop and returns the vertical text position to start at.
         /// </summary>
@@ -622,7 +648,7 @@ namespace MigraDoc.Rendering
             }
             //Automatic tab stop: FirstLineIndent < 0 => automatic tab stop at LeftIndent.
 
-            if (format.FirstLineIndent < 0 || 
+            if (format.FirstLineIndent < 0 ||
                 (format._listInfo != null && !format._listInfo.IsNull() && format.ListInfo.NumberPosition < format.LeftIndent))
             {
                 XUnit leftIndent = format.LeftIndent.Point;
@@ -858,8 +884,8 @@ namespace MigraDoc.Rendering
                 case "Image":
                     RenderImage((Image)docObj);
                     break;
-                //        default:
-                //          throw new NotImplementedException(typeName + " is coming soon...");
+                    //        default:
+                    //          throw new NotImplementedException(typeName + " is coming soon...");
             }
         }
 
@@ -1094,6 +1120,7 @@ namespace MigraDoc.Rendering
             if (!IgnoreBlank())
             {
                 XUnit wordDistance = CurrentWordDistance;
+                RenderFormattedTextShading(wordDistance);
                 RenderUnderline(wordDistance, false);
                 RealizeHyperlink(wordDistance);
                 _currentXPosition += wordDistance;
@@ -1123,8 +1150,12 @@ namespace MigraDoc.Rendering
             if (font.Subscript || font.Superscript)
                 xFont = FontHandler.ToSubSuperFont(xFont);
 
-            _gfx.DrawString(word, xFont, CurrentBrush, _currentXPosition, CurrentBaselinePosition);
             XUnit wordWidth = MeasureString(word);
+
+            RenderFormattedTextShading(wordWidth);
+
+            _gfx.DrawString(word, xFont, CurrentBrush, _currentXPosition, CurrentBaselinePosition);
+
             RenderUnderline(wordWidth, true);
             RealizeHyperlink(wordWidth);
             _currentXPosition += wordWidth;
@@ -1158,8 +1189,8 @@ namespace MigraDoc.Rendering
                         else
                         {
                             var pageRef = _fieldInfos.GetPhysicalPageNumber(hyperlink.BookmarkName);
-                        if (pageRef > 0)
-                            page.AddDocumentLink(new PdfRectangle(rect), pageRef);
+                            if (pageRef > 0)
+                                page.AddDocumentLink(new PdfRectangle(rect), pageRef);
                         }
                         break;
 
@@ -2408,11 +2439,11 @@ namespace MigraDoc.Rendering
                 {
                     DocumentObject parent = DocumentRelations.GetParent(_currentLeaf.Current);
                     parent = DocumentRelations.GetParent(parent);
-                    
+
                     FormattedText formattedText = parent as FormattedText;
                     if (formattedText != null)
                         return formattedText.Font;
-                    
+
                     Hyperlink hyperlink = parent as Hyperlink;
                     if (hyperlink != null)
                         return hyperlink.Font;
